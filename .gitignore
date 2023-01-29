@@ -1,0 +1,3 @@
+/* A .gitignore specifies which files git should ignore when you run git add -A */
+
+venv/
