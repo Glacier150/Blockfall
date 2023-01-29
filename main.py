@@ -2,12 +2,15 @@ import pygame
 import sys
 import random
 
+# Displays time since game start in top right
 def display_time():
     current_time = pygame.time.get_ticks()//1000 - start_time
     time_surf = font_goldeneye.render(f"Time {current_time}", False, (125, 125, 125))
     time_rect = time_surf.get_rect(topright = (1200, 0))
     screen.blit(time_surf, time_rect)
+    return current_time
 
+# Displays score in top left
 def display_score():
     score_surf = font_goldeneye.render(f"Score {score}", False, (125, 125, 125))
     score_rect = score_surf.get_rect(topleft = (0, 0))
@@ -23,7 +26,7 @@ font_goldeneye = pygame.font.Font("fonts/goldeneye.ttf", 80)
 font_atari = pygame.font.Font("fonts/atari.ttf", 25)
 game_active = False
 start_time = 0
-game_intro = True
+current_time = 0
 score = 0
 
 background_surf = pygame.image.load("graphics/star-background.bmp").convert()
@@ -69,22 +72,8 @@ while True:
         # if event.type == pygame.MOUSEBUTTONDOWN:
         #     print("mouse down")
 
-        if game_intro == True:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and select_rect.topright == (start_rect.left - 10, 360):
-                    game_intro = False
-                    game_active = True
-                if event.key == pygame.K_SPACE and select_rect.topright == (quit_rect.left - 10, 460):
-                    pygame.quit()
-                    sys.exit()
-                if event.key == pygame.K_DOWN and select_rect.topright == (start_rect.left - 10, 360):
-                    select_rect.topright = (quit_rect.left - 10, 460)
-                    screen.blit(select_surf, select_rect)
-                if event.key == pygame.K_UP and select_rect.topright == (quit_rect.left - 10, 460):
-                    select_rect.topright = (start_rect.left - 10, 360)
-                    screen.blit(select_surf, select_rect)
-
-        if game_active == True:
+        # In game controls
+        if game_active:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     player_speed = -5
@@ -96,27 +85,40 @@ while True:
                     player_speed = 0
                 if event.key == pygame.K_RIGHT and player_speed == 5:
                     player_speed = 0
+
+        # Intro screen controls
         else:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+
+                # Start button
+                if event.key == pygame.K_SPACE and select_rect.topright == (start_rect.left - 10, 360):
                     game_active = True
-                    enemy_rect.midbottom = (600, 0)
-                    pickup_rect.midbottom = (400, 0)
                     start_time = pygame.time.get_ticks()//1000
                     score = 0
+                    enemy_rect.midtop = (600, 0)
+                    pickup_rect.midtop = (400, 0)
+                    player_rect.midbottom = (600, 800)
 
-    if game_intro == True:
+                # Quit button
+                if event.key == pygame.K_SPACE and select_rect.topright == (quit_rect.left - 10, 460):
+                    pygame.quit()
+                    sys.exit()
+
+                # Move cursor down
+                if event.key == pygame.K_DOWN and select_rect.topright == (start_rect.left - 10, 360) and score == 0:
+                    select_rect.topright = (quit_rect.left - 10, 460)
+                    screen.blit(select_surf, select_rect)
+
+                # Move cursor up
+                if event.key == pygame.K_UP and select_rect.topright == (quit_rect.left - 10, 460):
+                    select_rect.topright = (start_rect.left - 10, 360)
+                    screen.blit(select_surf, select_rect)
+
+    # In game display
+    if game_active:
         screen.blit(background_surf, (0, 0))
         screen.blit(floor_surf, (0, 800))
-        screen.blit(title_surf, title_rect)
-        screen.blit(start_surf, start_rect)
-        screen.blit(quit_surf, quit_rect)
-        screen.blit(select_surf, select_rect)
-        screen.blit(controls_surf, controls_rect)
-    elif game_active == True:
-        screen.blit(background_surf, (0, 0))
-        screen.blit(floor_surf, (0, 800))
-        display_time()
+        current_time = display_time()
         display_score()
 
         # Enemy
@@ -139,19 +141,44 @@ while True:
             player_rect.right = 1200
         screen.blit(player_surf, player_rect)
 
-        # Collision
+        # Enemy to player collision check
         if enemy_rect.colliderect(player_rect):
-            enemy_rect.bottomleft = (random.randint(0, 1200-enemy_rect.w), 0)
+            enemy_rect.bottomleft = (random.randint(0, 1200-enemy_rect.width), 0)
+            player_speed = 0
             game_active = False
         
+        # Pickup to player collision check
         if pickup_rect.colliderect(player_rect):
-            pickup_rect.bottomleft = (random.randint(0, 1200-pickup_rect.w), 0)
+            pickup_rect.bottomleft = (random.randint(0, 1200-pickup_rect.width), 0)
             score += 1
-            display_score()
+        
+        # Pickup to enemy collision check
+        if pickup_rect.colliderect(enemy_rect):
+            pickup_rect.bottomleft = (random.randint(0, 1200-pickup_rect.width), 0)
+
+    # Intro / Game over screen display
     else:
-        screen.fill("Black")
-        screen.blit(player_surf, player_rect)
+        screen.blit(background_surf, (0, 0))
+        screen.blit(floor_surf, (0, 800))
+
+        screen.blit(title_surf, title_rect)
         screen.blit(controls_surf, controls_rect)
+
+        time_message = font_goldeneye.render(f"Your time {current_time}", False, (255, 255, 255))
+        time_message_rect = time_message.get_rect(center = (600, 450))
+        score_message = font_goldeneye.render(f"Your score {score}", False, (255, 255, 255))
+        score_message_rect = score_message.get_rect(center = (600, 350))
+
+        # Intro screen
+        if current_time == 0:
+            screen.blit(start_surf, start_rect)
+            screen.blit(quit_surf, quit_rect)
+            screen.blit(select_surf, select_rect)
+        
+        # Game over screen
+        else:
+            screen.blit(time_message, time_message_rect)
+            screen.blit(score_message, score_message_rect)
         
     # This is one way you can check mouse position and collision
     # mouse_pos = pygame.mouse.get_pos()
