@@ -16,21 +16,32 @@ ideally something compiled so that I can properly share it, but that's for
 another day. PyGame may be the most common thing to think of when talking
 about creating your first game, but you have to start somewhere.
 
+## Installation
+
 Because this is a Python project, you'll have to have downloaded Python on
 your computer from the [Official Python Website](https://www.python.org/).
 I'll work on learning how to make a virtual environment to run it, but
 that's currently beyond me.
+
+## Controls
 
 Once you boot up the game, the only controls so far are the up and down
 arrow keys to move the select cursor, the spacebar to select an option or
 respawn, and the left or right arrow keys to move your block once in the
 game.
 
+## Acknowledgements
+
 I followed a wonderfully made (and lengthy) tutorial on YouTube posted by
 Clear Code. Here's the link if you want to check it out:
+
 [The ultimate introduction to Pygame](https://youtu.be/AY9MnQ4x3zk)
 
-Protected under the MIT License
+## License
+
+Blockfall is licensed under the MIT License.
+
+## Author
 
 Glacier150
 
