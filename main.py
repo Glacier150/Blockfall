@@ -27,18 +27,18 @@ def display_score():
 
 def enemy_movement(enemy_list):
     if enemy_list:
-        for red_block_rect in enemy_list:
-            red_block_rect.y += 5
+        for enemy_rect in enemy_list:
+            enemy_rect.y += 5
 
-            # If the enemy is a red block, show a red block
-            if red_block_rect.width == 50:
-                screen.blit(red_block_surf, red_block_rect)
-            # If the enemy is a spike block, show a spike block
+            # If the enemy has the width of a red block, show a red block and use that iterations rect
+            if enemy_rect.width == 50:
+                screen.blit(red_block_surf, enemy_rect)
+            # If the enemy has width of a spike block, show a spike block and use that iterations rect
             else:
-                screen.blit(spike_block_surf, red_block_rect)
+                screen.blit(spike_block_surf, enemy_rect)
 
-        # If the enemy touches the ground, remove them from the list
-        enemy_list = [enemy for enemy in enemy_list if enemy.bottom <= 800]
+        # If the enemy touches the ground, remove them from the list by remaking the list with only enemies above the ground
+        enemy_list = [enemy for enemy in enemy_list if enemy.bottom < 800]
 
         return enemy_list
     # Enemy list is NoneType on start, makes it an empty list
@@ -73,6 +73,18 @@ def pickup_collisions(pickup, score, enemies, player):
     return score
 
 
+# Animate player surface
+
+
+def player_animation():
+    global player_surf, player_index
+
+    player_index += 0.1
+    if player_index >= len(player_move):
+        player_index = 0
+    player_surf = player_move[int(player_index)]
+
+
 pygame.init()
 
 display_size = display_width, display_height = (1200, 900)
@@ -86,6 +98,7 @@ start_time = 0
 current_time = 0
 score = 0
 
+# Intro Screen
 background_surf = pygame.image.load("graphics/star-background.bmp").convert()
 floor_surf = pygame.image.load("graphics/grass-floor.bmp").convert()
 
@@ -104,12 +117,21 @@ select_rect = select_surf.get_rect(topright=(start_rect.left - 10, 360))
 controls_surf = font_atari.render("Space to Continue", False, (255, 255, 255))
 controls_rect = controls_surf.get_rect(midtop=(600, 600))
 
-# Enemies
-red_block_surf = pygame.image.load("graphics/red-square.bmp").convert()
-red_block_rect = red_block_surf.get_rect(midtop=(600, 0))
+# Red block enemy
+red_block_frame_1 = pygame.image.load("graphics/red-square-1.bmp").convert()
+red_block_frame_2 = pygame.image.load("graphics/red-square-2.bmp").convert()
+red_block_frames = [red_block_frame_1, red_block_frame_2]
+red_block_frame_index = 0
+red_block_surf = red_block_frames[red_block_frame_index]
+red_block_rect = red_block_surf.get_rect()
 
-spike_block_surf = pygame.image.load("graphics/spike-square.bmp").convert()
-spike_block_rect = spike_block_surf.get_rect(midtop=(800, 0))
+# Spike block enemy
+spike_block_frame_1 = pygame.image.load("graphics/spike-square-1.bmp").convert()
+spike_block_frame_2 = pygame.image.load("graphics/spike-square-2.bmp").convert()
+spike_block_frames = [spike_block_frame_1, spike_block_frame_2]
+spike_block_frame_index = 0
+spike_block_surf = spike_block_frames[spike_block_frame_index]
+spike_block_rect = spike_block_surf.get_rect()
 
 enemy_rect_list = []
 
@@ -118,7 +140,12 @@ pickup_surf = pygame.image.load("graphics/blue-square.bmp").convert()
 pickup_rect = pickup_surf.get_rect(midtop=(400, 0))
 
 # Player
-player_surf = pygame.image.load("graphics/green-square.bmp").convert()
+player_move_1 = pygame.image.load("graphics/green-square-1.bmp").convert()
+player_move_2 = pygame.image.load("graphics/green-square-2.bmp").convert()
+player_move = [player_move_1, player_move_2]
+player_index = 0
+
+player_surf = player_move[player_index]
 player_rect = player_surf.get_rect(midbottom=(600, 800))
 velocity = 0
 accelerating_left = False
@@ -128,20 +155,17 @@ accelerating_right = False
 enemy_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(enemy_timer, 1250)
 
+red_block_animation_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(red_block_animation_timer, 700)
+
+spike_block_animation_timer = pygame.USEREVENT + 3
+pygame.time.set_timer(spike_block_animation_timer, 500)
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-
-        # This is how to check if the mouse touches a rectangle in the event loop
-        # if event.type == pygame.MOUSEMOTION:
-        #     if player_rect.collidepoint(event.pos):
-        #         print("collision")
-
-        # This is how to check mouse button input
-        # if event.type == pygame.MOUSEBUTTONDOWN:
-        #     print("mouse down")
 
         # In game controls
         if game_active:
@@ -168,7 +192,6 @@ while True:
                     game_active = True
                     start_time = pygame.time.get_ticks() // 1000
                     score = 0
-                    red_block_rect.midtop = (600, 0)
                     pickup_rect.midtop = (400, 0)
                     player_rect.midbottom = (600, 800)
 
@@ -198,27 +221,42 @@ while True:
                     screen.blit(select_surf, select_rect)
 
         # Add enemies to list every 1.5 seconds
-        if event.type == enemy_timer and game_active:
-            # If random number between 0-3 is 2 or less, make the enemy a red block
-            if randint(0, 4) <= 2:
-                enemy_rect_list.append(
-                    red_block_surf.get_rect(
-                        bottomleft=(
-                            randint(0, 1200 - red_block_rect.width),
-                            randint(-300, 0),
+        if game_active:
+            if event.type == enemy_timer:
+                # If random number between 0-3 is 2 or less, make the enemy a red block
+                if randint(0, 4) < 3:
+                    enemy_rect_list.append(
+                        red_block_surf.get_rect(
+                            bottomleft=(
+                                randint(0, 1200 - red_block_rect.width),
+                                randint(-300, 0),
+                            )
                         )
                     )
-                )
-            # If random number between 0-3 is 3, make the enemy a spike block
-            else:
-                enemy_rect_list.append(
-                    spike_block_surf.get_rect(
-                        bottomleft=(
-                            randint(0, 1200 - spike_block_rect.width),
-                            randint(-300, 0),
+                # If random number between 0-3 is 3, make the enemy a spike block
+                else:
+                    enemy_rect_list.append(
+                        spike_block_surf.get_rect(
+                            bottomleft=(
+                                randint(0, 1200 - spike_block_rect.width),
+                                randint(-300, 0),
+                            )
                         )
                     )
-                )
+            
+            if event.type == red_block_animation_timer:
+                if red_block_frame_index == 0:
+                    red_block_frame_index = 1
+                else:
+                    red_block_frame_index = 0
+                red_block_surf = red_block_frames[red_block_frame_index]
+
+            if event.type == spike_block_animation_timer:
+                if spike_block_frame_index == 0:
+                    spike_block_frame_index = 1
+                else:
+                    spike_block_frame_index = 0
+                spike_block_surf = spike_block_frames[spike_block_frame_index]
 
     # In game display
     if game_active:
@@ -226,12 +264,6 @@ while True:
         screen.blit(floor_surf, (0, 800))
         current_time = display_time()
         display_score()
-
-        # Enemy
-        # red_block_rect.y += 5
-        # if red_block_rect.bottom >= 800:
-        #     red_block_rect.bottomleft = (randint(0, 1200-red_block_rect.w), 0)
-        # screen.blit( red_block_rect)
 
         # Pickup
         pickup_rect.y += 5
@@ -249,7 +281,7 @@ while True:
                 velocity = 8
             velocity += 1
         if not accelerating_left and not accelerating_right:
-            velocity = velocity * 0.9
+            velocity = velocity * 0.87
             if abs(velocity) < 0.1:
                 velocity = 0
         player_rect.x += velocity
@@ -261,6 +293,7 @@ while True:
             player_rect.right = 1200
             velocity = 0
             accelerating_right = False
+        player_animation()
         screen.blit(player_surf, player_rect)
 
         # Enemy movement
@@ -269,7 +302,7 @@ while True:
         # Update game_active based on enemy to player collision
         game_active = enemy_collisions(player_rect, enemy_rect_list)
 
-        # Update score pased on pickup to player / enemy collision
+        # Update score pased on pickup to player collision or update pickup position if pickup collides with enemy
         score = pickup_collisions(pickup_rect, score, enemy_rect_list, player_rect)
 
     # Intro / Game over screen display
@@ -304,11 +337,6 @@ while True:
         else:
             screen.blit(time_message, time_message_rect)
             screen.blit(score_message, score_message_rect)
-
-    # This is one way you can check mouse position and collision
-    # mouse_pos = pygame.mouse.get_pos()
-    # if player_rect.collidepoint(mouse_pos):
-    #     print(pygame.mouse.get_pressed())
 
     pygame.display.update()
     clock.tick(60)
